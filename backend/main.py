@@ -8,11 +8,19 @@ import os
 
 app = FastAPI(title="Zero Hunger Assistant API")
 
-# CORS middleware for React frontend
+# Define explicitly allowed origins
+# REPLACE the render URL with your actual frontend URL from your Render dashboard
+origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://zero-hunger-web.onrender.com", # Add your actual frontend URL here
+]
+
+# CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
-    allow_credentials=True,
+    allow_origins=origins,      # Must use specific list, not "*"
+    allow_credentials=True,     # Required for session/cookie support
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -21,16 +29,13 @@ app.add_middleware(
 conversation_flow = ConversationFlow()
 db = Database()
 
-
 class ChatMessage(BaseModel):
     message: str
     session_id: Optional[str] = None
 
-
 class ChatResponse(BaseModel):
     response: str
     session_id: str
-
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(chat_message: ChatMessage):
@@ -55,31 +60,17 @@ async def chat_endpoint(chat_message: ChatMessage):
         )
     
     except Exception as e:
+        # Note: If an internal 500 error occurs, CORS headers might not be sent.
+        # Ensure your API key and DB connection are working correctly.
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy"}
 
-
 if __name__ == "__main__":
     import uvicorn
-    import os
-    port = int(os.environ.get("PORT", 8000))
+    # Render uses the PORT environment variable; default to 10000 for Render
+    port = int(os.environ.get("PORT", 10000))
     uvicorn.run(app, host="0.0.0.0", port=port)
-
-from fastapi.middleware.cors import CORSMiddleware
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-
-
